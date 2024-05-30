@@ -1,0 +1,126 @@
+name: Release Build
+
+on:
+#  push:
+#    branches:
+#      - master
+#    paths:
+#      - 'CHANGELOG.md'
+  workflow_dispatch:
+  repository_dispatch:
+    types: [trigger-personal-use-release-build]
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    outputs:
+      version: ${{ steps.set-ver.outputs.version }}
+      sign: ${{ steps.check.outputs.sign }}
+    steps:
+      - id: set-ver
+        run: |
+          echo "version=$(date -d "8 hour" -u +3.%y.%m%d%H)" >> $GITHUB_OUTPUT
+      - id: check
+        run: |
+          echo "sign=yes" >> $GITHUB_OUTPUT
+
+  build:
+    needs: prepare
+    if: ${{ needs.prepare.outputs.sign }}
+    strategy:
+      matrix:
+        product: [ app ]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    env:
+      product: ${{ matrix.product }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: 17
+
+      - name: Clear 18PlusList.txt
+        run: |
+          sed -i "s#gedoor/legado#${{ github.repository }}#" $GITHUB_WORKSPACE/app/src/main/java/io/legado/app/help/AppUpdateGitHub.kt
+          sed -i 's/TimeUnit\.DAYS\.toMillis(1)/TimeUnit\.HOURS\.toMillis(6)/g' $GITHUB_WORKSPACE/app/src/main/java/io/legado/app/help/storage/Backup.kt
+          sed -i 's/SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())/SimpleDateFormat("yyyy-MM-dd HH-mm-ss", Locale.getDefault())/' $GITHUB_WORKSPACE/app/src/main/java/io/legado/app/help/storage/Backup.kt
+          echo "清空18PlusList.txt"
+          echo "">$GITHUB_WORKSPACE/app/src/main/assets/18PlusList.txt
+          
+      - name: Release Apk Sign
+        run: |
+          # not use this output
+          # echo "KeyStore=yes" >> $GITHUB_OUTPUT
+          cp $GITHUB_WORKSPACE/.github/workflows/legado.jks $GITHUB_WORKSPACE/app/legado.jks
+          echo -e "\n" >> gradle.properties
+          echo RELEASE_KEY_ALIAS='legado' >> gradle.properties
+          echo RELEASE_KEY_PASSWORD='gedoor_legado' >> gradle.properties
+          echo RELEASE_STORE_PASSWORD='gedoor_legado' >> gradle.properties
+          echo RELEASE_STORE_FILE='./legado.jks' >> gradle.properties
+
+      - name: Unify Version Name
+        run: |
+          echo "统一版本号"
+          sed "/def version/c def version = \"${{ env.VERSION }}\"" $GITHUB_WORKSPACE/app/build.gradle  -i
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Build With Gradle
+        run: |
+          echo "开始进行${{ env.product }}构建"
+          chmod +x gradlew
+          ./gradlew assemble${{ env.product }}release --build-cache --parallel --daemon --warning-mode all
+
+      - name: Organize the Files
+        run: |
+          mkdir -p ${{ github.workspace }}/apk/
+          cp -rf ${{ github.workspace }}/app/build/outputs/apk/*/*/*.apk ${{ github.workspace }}/apk/
+          
+      - name: Upload App To Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: legado_${{ env.product }}
+          path: ${{ github.workspace }}/apk/*.apk
+
+      - name: Release
+        if: ${{ env.product == 'app' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          name: legado_app_${{ env.VERSION }}
+          tag_name: ${{ env.VERSION }}
+          body_path: ${{ github.workspace }}/app/src/main/assets/updateLog.md
+          draft: false
+          prerelease: false
+          files: ${{ github.workspace }}/apk/legado_app_*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Push Assets To "release" Branch
+        if: ${{ github.actor == 'gedoor' }}
+        run: |
+          cd $GITHUB_WORKSPACE/apk/
+          git init
+          git checkout -b release
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.ACTIONS_TOKEN }}@github.com/${{ github.actor }}/release"
+          git add *.apk
+          git commit -m "${{ env.VERSION }}"
+          git push -f -u origin release
+          
+      - name: Purge Jsdelivr Cache
+        if: ${{ github.actor == 'gedoor' }}
+        run: |
+          result=$(curl -s https://purge.jsdelivr.net/gh/${{ github.actor }}/release@release/)
+          if echo $result |grep -q 'success.*true'; then
+            echo "jsdelivr缓存更新成功"
+          else
+            echo $result
+          fi
