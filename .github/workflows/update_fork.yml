@@ -1,0 +1,35 @@
+#更新fork
+name: auto update fork
+
+on: 
+  workflow_dispatch:
+  schedule:
+    - cron: '0 16 * * 1' #0点定时任务
+
+jobs:
+  auto_update_fork:
+    runs-on: ubuntu-latest
+    # if: ${{ github.event.repository.owner.id == github.event.sender.id && github.actor != 'gedoor' }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with: 
+        token: ${{ secrets.PAT }}
+    - name: Set env
+      run: |
+        git config --global user.email "github-actions@github.com"
+        git config --global user.name "github-actions"
+    - name: Update fork
+      run: |
+        git remote add upstream https://github.com/gedoor/legado.git
+        git remote -v
+        git fetch upstream
+        git checkout master
+        git merge upstream/master --allow-unrelated-histories --strategy-option=theirs
+        git push origin master
+
+    - name: Dispatch trigger event
+      uses: peter-evans/repository-dispatch@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        event-type: trigger-personal-use-release-build
