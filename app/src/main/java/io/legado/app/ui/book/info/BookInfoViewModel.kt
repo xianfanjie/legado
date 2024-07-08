@@ -165,6 +165,8 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
         scope: CoroutineScope = viewModelScope
     ) {
         if (book.isLocal) {
+            LocalBook.upBookInfo(book)
+            bookData.postValue(book)
             loadChapter(book, scope)
         } else {
             val bookSource = bookSource ?: let {
@@ -424,6 +426,7 @@ class BookInfoViewModel(application: Application) : BaseViewModel(application) {
     fun addToBookshelf(success: (() -> Unit)?) {
         execute {
             bookData.value?.let { book ->
+                book.removeType(BookType.notShelf)
                 if (book.order == 0) {
                     book.order = appDb.bookDao.minOrder - 1
                 }

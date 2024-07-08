@@ -97,6 +97,7 @@ interface BaseSource : JsExtensions {
      * 解析header规则
      */
     fun getHeaderMap(hasLoginHeader: Boolean = false) = HashMap<String, String>().apply {
+        checkRhinoRecursiveCall()
         header?.let {
             GSON.fromJsonObject<Map<String, String>>(
                 when {

@@ -223,6 +223,10 @@ fun BookSource.getBookType(): Int {
     }
 }
 
+fun BookSource.getAllBookType(): Int {
+    return BookType.text or BookType.image or BookType.audio or BookType.webFile
+}
+
 fun Book.sync(oldBook: Book) {
     val curBook = appDb.bookDao.getBook(oldBook.bookUrl)!!
     durChapterTime = curBook.durChapterTime
@@ -238,6 +242,11 @@ fun Book.getBookSource(): BookSource? {
 
 fun Book.isLocalModified(): Boolean {
     return isLocal && LocalBook.getLastModified(this).getOrDefault(0L) > latestChapterTime
+}
+
+fun Book.releaseHtmlData() {
+    infoHtml = null
+    tocHtml = null
 }
 
 fun Book.isSameNameAuthor(other: Any?): Boolean {

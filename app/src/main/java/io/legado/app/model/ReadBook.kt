@@ -97,6 +97,7 @@ object ReadBook : CoroutineScope by MainScope() {
         durChapterPos = book.durChapterPos
         isLocalBook = book.isLocal
         clearTextChapter()
+        callBack?.upContent()
         callBack?.upMenuView()
         callBack?.upPageAnim()
         upWebBook(book)
