@@ -53,9 +53,14 @@ object RhinoScriptEngine : AbstractScriptEngine(), Invocable, Compilable {
     private val indexedProps: MutableMap<Any, Any?>
     private val implementor: InterfaceImplementor
 
-    fun eval(js: String, bindingsConfig: SimpleBindings.() -> Unit = {}): Any? {
-        val bindings = SimpleBindings()
-        bindings.apply(bindingsConfig)
+    fun eval(js: String, bindingsConfig: ScriptBindings.() -> Unit = {}): Any? {
+        val bindings = ScriptBindings()
+        Context.enter()
+        try {
+            bindings.apply(bindingsConfig)
+        } finally {
+            Context.exit()
+        }
         return eval(js, bindings)
     }
 
@@ -247,6 +252,16 @@ object RhinoScriptEngine : AbstractScriptEngine(), Invocable, Compilable {
         }
         //newScope.put("context", newScope, context)
         return newScope
+    }
+
+    override fun getRuntimeScope(bindings: ScriptBindings): Scriptable {
+        val cx = Context.enter()
+        try {
+            bindings.prototype = cx.initStandardObjects()
+        } finally {
+            Context.exit()
+        }
+        return bindings
     }
 
     @Throws(ScriptException::class)
