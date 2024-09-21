@@ -93,9 +93,9 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
         receiptIntent(intent)
     }
 
-    override fun onNewIntent(data: Intent?) {
-        super.onNewIntent(data)
-        receiptIntent(data)
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        receiptIntent(intent)
     }
 
     override fun onCompatCreateOptionsMenu(menu: Menu): Boolean {
@@ -174,10 +174,8 @@ class SearchActivity : VMBaseActivity<ActivityBookSearchBinding, SearchViewModel
 
     private fun initSearchView() {
         searchView.applyTint(primaryTextColor)
-        searchView.onActionViewExpanded()
         searchView.isSubmitButtonEnabled = true
         searchView.queryHint = getString(R.string.search_book_key)
-        searchView.clearFocus()
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
                 searchView.clearFocus()

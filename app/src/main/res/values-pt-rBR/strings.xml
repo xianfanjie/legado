@@ -94,7 +94,7 @@
         \u3000\u3000 Este é um App de leitura de software livre, desenvolvido em Kotlin, você é bem-vindo a participar em projeto.
     </string>
     <string name="app_share_description">
-        Legado (YueDu 3.0) link de download：\n https://play.google.com/store/apps/details?id=io.legado.play.release
+        Legado (YueDu 3.0) link de download：\n https://github.com/gedoor/legado/releases
     </string>
     <string name="version_name">Versão %s</string>
     <string name="pt_background_verification">Verificação em segundo plano</string>
@@ -1164,4 +1164,7 @@
     <string name="beta_releaseA_version">共存版</string>
     <string name="stream_read_aloud_audio">流式播放音频</string>
     <string name="stream_read_aloud_audio_summary">即边下边播，网络不好时播放会断断续续，仅TTS源有效</string>
+    <string name="pause_read_aloud_while_phone_calls_title">来电期间暂停朗读</string>
+    <string name="pause_read_aloud_while_phone_calls_summary">在通话期间暂停朗读，需要读取手机状态权限</string>
+    <string name="read_aloud_read_phone_state_permission_rationale">阅读需要读取手机状态实现来电期间暂停朗读功能</string>
 </resources>

@@ -93,7 +93,7 @@
         \u3000\u3000這是一款使用Kotlin全新開發的開源的閱讀軟體，歡迎您的加入。
     </string>
     <string name="app_share_description">
-        閱讀3.0下載網址：\nhttps://play.google.com/store/apps/details?id=io.legado.play.release
+        閱讀3.0下載網址：\nhttps://github.com/gedoor/legado/releases
     </string>
     <string name="version_name">Version %s</string>
     <string name="pt_background_verification">後臺校驗書源</string>
@@ -1163,4 +1163,7 @@
     <string name="beta_releaseA_version">共存版</string>
     <string name="stream_read_aloud_audio">流式播放音频</string>
     <string name="stream_read_aloud_audio_summary">即边下边播，网络不好时播放会断断续续，仅TTS源有效</string>
+    <string name="pause_read_aloud_while_phone_calls_title">来电期间暂停朗读</string>
+    <string name="pause_read_aloud_while_phone_calls_summary">在通话期间暂停朗读，需要读取手机状态权限</string>
+    <string name="read_aloud_read_phone_state_permission_rationale">阅读需要读取手机状态实现来电期间暂停朗读功能</string>
 </resources>

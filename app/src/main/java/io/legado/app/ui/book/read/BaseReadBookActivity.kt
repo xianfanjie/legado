@@ -5,16 +5,14 @@ import android.app.DatePickerDialog
 import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
-import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
-import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.WindowInsets
 import android.view.WindowManager
-import android.widget.FrameLayout
 import androidx.activity.viewModels
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.lifecycle.lifecycleScope
 import io.legado.app.R
 import io.legado.app.base.VMBaseActivity
 import io.legado.app.constant.AppConst.charsets
@@ -44,15 +42,11 @@ import io.legado.app.utils.find
 import io.legado.app.utils.getPrefString
 import io.legado.app.utils.gone
 import io.legado.app.utils.isTv
-import io.legado.app.utils.navigationBarGravity
-import io.legado.app.utils.navigationBarHeight
 import io.legado.app.utils.setLightStatusBar
 import io.legado.app.utils.setNavigationBarColorAuto
 import io.legado.app.utils.showDialogFragment
 import io.legado.app.utils.viewbindingdelegate.viewBinding
 import io.legado.app.utils.visible
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -89,6 +83,13 @@ abstract class BaseReadBookActivity :
         setOrientation()
         upLayoutInDisplayCutoutMode()
         super.onCreate(savedInstanceState)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { _, windowInsets ->
+            val insets = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            binding.navigationBar.run {
+                layoutParams = layoutParams.apply { height = insets.bottom }
+            }
+            windowInsets
+        }
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
@@ -229,30 +230,30 @@ abstract class BaseReadBookActivity :
     private fun upNavigationBar() {
         binding.navigationBar.run {
             if (bottomDialog > 0 || binding.readMenu.isVisible) {
-                val navigationBarHeight =
-                    if (ReadBookConfig.hideNavigationBar) navigationBarHeight else 0
-                when (navigationBarGravity) {
-                    Gravity.BOTTOM -> layoutParams =
-                        (layoutParams as FrameLayout.LayoutParams).apply {
-                            height = navigationBarHeight
-                            width = MATCH_PARENT
-                            gravity = Gravity.BOTTOM
-                        }
-
-                    Gravity.LEFT -> layoutParams =
-                        (layoutParams as FrameLayout.LayoutParams).apply {
-                            height = MATCH_PARENT
-                            width = navigationBarHeight
-                            gravity = Gravity.LEFT
-                        }
-
-                    Gravity.RIGHT -> layoutParams =
-                        (layoutParams as FrameLayout.LayoutParams).apply {
-                            height = MATCH_PARENT
-                            width = navigationBarHeight
-                            gravity = Gravity.RIGHT
-                        }
-                }
+//                val navigationBarHeight =
+//                    if (ReadBookConfig.hideNavigationBar) navigationBarHeight else 0
+//                when (navigationBarGravity) {
+//                    Gravity.BOTTOM -> layoutParams =
+//                        (layoutParams as FrameLayout.LayoutParams).apply {
+//                            height = navigationBarHeight
+//                            width = MATCH_PARENT
+//                            gravity = Gravity.BOTTOM
+//                        }
+//
+//                    Gravity.LEFT -> layoutParams =
+//                        (layoutParams as FrameLayout.LayoutParams).apply {
+//                            height = MATCH_PARENT
+//                            width = navigationBarHeight
+//                            gravity = Gravity.LEFT
+//                        }
+//
+//                    Gravity.RIGHT -> layoutParams =
+//                        (layoutParams as FrameLayout.LayoutParams).apply {
+//                            height = MATCH_PARENT
+//                            width = navigationBarHeight
+//                            gravity = Gravity.RIGHT
+//                        }
+//                }
                 visible()
             } else {
                 gone()
@@ -278,10 +279,13 @@ abstract class BaseReadBookActivity :
      * 适配刘海
      */
     private fun upLayoutInDisplayCutoutMode() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && ReadBookConfig.readBodyToLh) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes = window.attributes.apply {
-                layoutInDisplayCutoutMode =
+                layoutInDisplayCutoutMode = if (ReadBookConfig.readBodyToLh) {
                     WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                } else {
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_NEVER
+                }
             }
         }
     }

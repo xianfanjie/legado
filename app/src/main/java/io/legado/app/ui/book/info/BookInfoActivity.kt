@@ -58,6 +58,7 @@ import io.legado.app.ui.widget.dialog.WaitDialog
 import io.legado.app.utils.ColorUtils
 import io.legado.app.utils.GSON
 import io.legado.app.utils.StartActivityContract
+import io.legado.app.utils.applyNavigationBarPadding
 import io.legado.app.utils.dpToPx
 import io.legado.app.utils.gone
 import io.legado.app.utils.longToastOnUi
@@ -154,6 +155,7 @@ class BookInfoActivity :
         binding.arcView.setBgColor(backgroundColor)
         binding.llInfo.setBackgroundColor(backgroundColor)
         binding.flAction.setBackgroundColor(bottomBackground)
+        binding.flAction.applyNavigationBarPadding()
         binding.tvShelf.setTextColor(getPrimaryTextColor(ColorUtils.isColorLight(bottomBackground)))
         binding.tvToc.text = getString(R.string.toc_s, getString(R.string.loading))
         viewModel.bookData.observe(this) { showBook(it) }

@@ -90,7 +90,7 @@
     <string name="offline_cache_s">cache (các) chương đã chọn vào bộ lưu trữ</string>
     <string name="change_origin">Thay đổi nguồn gốc</string>
     <string name="about_description">Đây là phần mềm đọc mã nguồn mở mới được phát triển bởi Kotlin, chào mừng bạn tham gia cùng chúng tôi. </string>
-    <string name="app_share_description">\n Liên kết tải xuống Legado (YueDu 3.0):\\n https://play.google.com/store/apps/details?id=io.legado.play.release\n</string>
+    <string name="app_share_description">\n Liên kết tải xuống Legado (YueDu 3.0):\\n https://github.com/gedoor/legado/releases\n</string>
     <string name="version_name">Phiên bản %s</string>
     <string name="pt_background_verification">Xác minh lý lịch</string>
     <string name="ps_background_verification">bạn có thể tự do thao tác khi xác thực nguồn sách</string>
@@ -1160,4 +1160,7 @@ Còn </string>
     <string name="beta_releaseA_version">共存版</string>
     <string name="stream_read_aloud_audio">流式播放音频</string>
     <string name="stream_read_aloud_audio_summary">即边下边播，网络不好时播放会断断续续，仅TTS源有效</string>
+    <string name="pause_read_aloud_while_phone_calls_title">来电期间暂停朗读</string>
+    <string name="pause_read_aloud_while_phone_calls_summary">在通话期间暂停朗读，需要读取手机状态权限</string>
+    <string name="read_aloud_read_phone_state_permission_rationale">阅读需要读取手机状态实现来电期间暂停朗读功能</string>
 </resources>

@@ -66,7 +66,6 @@ import kotlin.coroutines.coroutineContext
 @SuppressLint("UnsafeOptInUsageError")
 class HttpReadAloudService : BaseReadAloudService(),
     Player.Listener {
-
     private val exoPlayer: ExoPlayer by lazy {
         ExoPlayer.Builder(this).build()
     }
@@ -85,11 +84,7 @@ class HttpReadAloudService : BaseReadAloudService(),
             .setCache(cache)
     }
     private val loadErrorHandlingPolicy by lazy {
-        object : DefaultLoadErrorHandlingPolicy(0) {
-            override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
-                return C.TIME_UNSET
-            }
-        }
+        CustomLoadErrorHandlingPolicy()
     }
     private var speechRate: Int = AppConfig.speechRatePlay + 5
     private var downloadTask: Coroutine<*>? = null
@@ -334,7 +329,8 @@ class HttpReadAloudService : BaseReadAloudService(),
                     speakSpeed = speechRate,
                     source = httpTts,
                     headerMapF = httpTts.getHeaderMap(true),
-                    readTimeout = 300 * 1000L
+                    readTimeout = 300 * 1000L,
+                    coroutineContext = coroutineContext
                 )
                 var response = analyzeUrl.getResponseAwait()
                 coroutineContext.ensureActive()
@@ -575,4 +571,11 @@ class HttpReadAloudService : BaseReadAloudService(),
     override fun aloudServicePendingIntent(actionStr: String): PendingIntent? {
         return servicePendingIntent<HttpReadAloudService>(actionStr)
     }
+
+    inner class CustomLoadErrorHandlingPolicy : DefaultLoadErrorHandlingPolicy(0) {
+        override fun getRetryDelayMsFor(loadErrorInfo: LoadErrorHandlingPolicy.LoadErrorInfo): Long {
+            return C.TIME_UNSET
+        }
+    }
+
 }
