@@ -132,21 +132,46 @@ const {
   readSettingsVisible,
   miniInterface,
   showContent,
-  config,
-  readingBook,
   bookProgress,
+  theme,
+  isNight,
 } = storeToRefs(store);
+
 const chapterPos = computed({
-  get: () => readingBook.value.chapterPos,
-  set: (value) => (readingBook.value.chapterPos = value),
+  get: () => store.readingBook.chapterPos,
+  set: (value) => (store.readingBook.chapterPos = value),
 });
 const chapterIndex = computed({
-  get: () => readingBook.value.index,
-  set: (value) => (readingBook.value.index = value),
+  get: () => store.readingBook.index,
+  set: (value) => (store.readingBook.index = value),
 });
 
-const theme = computed(() => config.value.theme);
-const infiniteLoading = computed(() => config.value.infiniteLoading);
+// 无限滚动
+const infiniteLoading = computed(() => store.config.infiniteLoading);
+let scrollObserver;
+const loading = ref();
+watchEffect(() => {
+  if (!infiniteLoading.value) {
+    scrollObserver?.disconnect();
+  } else {
+    scrollObserver?.observe(loading.value);
+  }
+});
+const loadMore = () => {
+  let index = chapterData.value.slice(-1)[0].index;
+  if (catalog.value.length - 1 > index) {
+    getContent(index + 1, false);
+    store.saveBookProgress(); // 保存的是上一章的进度，不是预载的本章进度
+  }
+};
+// IntersectionObserver回调 底部加载
+const onReachBottom = (entries) => {
+  if (isLoading.value) return;
+  for (let { isIntersecting } of entries) {
+    if (!isIntersecting) return;
+    loadMore();
+  }
+};
 
 // 字体
 const fontFamily = computed(() => {
@@ -208,7 +233,6 @@ const rightBarTheme = computed(() => {
     display: miniInterface.value && !showToolBar.value ? "none" : "block",
   };
 });
-const isNight = computed(() => theme.value == 6);
 
 /**
  * pc移动端判断 最大阅读宽度修正
@@ -302,7 +326,10 @@ const toChapterPos = (pos) => {
 };
 
 // 60秒保存一次进度
-const saveBookProgressThrottle = useThrottleFn(() => store.saveBookProgress(), 60000)
+const saveBookProgressThrottle = useThrottleFn(
+  () => store.saveBookProgress(),
+  60000,
+);
 
 const onReadedLengthChange = (index, pos) => {
   saveReadingBookProgressToBrowser(index, pos);
@@ -386,32 +413,6 @@ const toPreChapter = () => {
   }
 };
 
-// 无限滚动
-let scrollObserver;
-const loading = ref();
-watchEffect(() => {
-  if (!infiniteLoading.value) {
-    scrollObserver?.disconnect();
-  } else {
-    scrollObserver?.observe(loading.value);
-  }
-});
-const loadMore = () => {
-  let index = chapterData.value.slice(-1)[0].index;
-  if (catalog.value.length - 1 > index) {
-    getContent(index + 1, false);
-    store.saveBookProgress(); // 保存的是上一章的进度，不是预载的本章进度
-  }
-};
-// IntersectionObserver回调 底部加载
-const onReachBottom = (entries) => {
-  if (isLoading.value) return;
-  for (let { isIntersecting } of entries) {
-    if (!isIntersecting) return;
-    loadMore();
-  }
-};
-
 let canJump = true;
 // 监听方向键
 const handleKeyPress = (event) => {
@@ -431,10 +432,7 @@ const handleKeyPress = (event) => {
       event.stopPropagation();
       event.preventDefault();
       if (document.documentElement.scrollTop === 0) {
-        ElMessage({
-          message: "已到达页面顶部",
-          type: "warn",
-        });
+        ElMessage.warning("已到达页面顶部");
       } else {
         canJump = false;
         jump(0 - document.documentElement.clientHeight + 100, {
@@ -451,10 +449,7 @@ const handleKeyPress = (event) => {
           document.documentElement.scrollTop ===
         document.documentElement.scrollHeight
       ) {
-        ElMessage({
-          message: "已到达页面底部",
-          type: "warn",
-        });
+        ElMessage.warning("已到达页面底部");
       } else {
         canJump = false;
         jump(document.documentElement.clientHeight - 100, {
@@ -541,6 +536,43 @@ onUnmounted(() => {
   readSettingsVisible.value = false;
   popCataVisible.value = false;
   scrollObserver?.disconnect();
+  scrollObserver = null;
+});
+
+const addToBookShelfConfirm = async () => {
+  const bookUrl = sessionStorage.getItem("bookUrl");
+  const bookName = sessionStorage.getItem("bookName");
+  const isSeachBook = sessionStorage.getItem("isSeachBook");
+  const book = JSON.parse(localStorage.getItem(bookUrl));
+  sessionStorage.removeItem("isSeachBook");
+  // 阅读的是搜索的书籍 并未在书架
+  if (isSeachBook === "true") {
+    await ElMessageBox.confirm(`是否将《${bookName}》放入书架？`, "放入书架", {
+      confirmButtonText: "确认",
+      cancelButtonText: "否",
+      type: "info",
+      /*      
+        ElMessageBox.confirm默认在触发hashChange事件时自动关闭
+        按下物理返回键时触发hashChange事件
+        使用router.push("/")则不会触发hashChange事件
+        */
+      closeOnHashChange: false,
+    })
+      .then(() => {
+        //选择是，无动作
+      })
+      .catch(async () => {
+        //选择否，删除书籍
+        await API.deleteBook(book);
+      });
+  }
+};
+onBeforeRouteLeave(async (to, from, next) => {
+  console.log("onBeforeRouteLeave");
+  // 弹窗时停止响应按键翻页
+  window.removeEventListener("keyup", handleKeyPress);
+  await addToBookShelfConfirm();
+  next();
 });
 </script>
 

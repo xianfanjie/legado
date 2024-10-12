@@ -16,7 +16,7 @@
             :style="themeColor"
             ref="themes"
             @click="setTheme(index)"
-            :class="{ selected: selectedTheme == index }"
+            :class="{ selected: theme == index }"
             ><em v-if="index < 6" class="iconfont">&#58980;</em
             ><em v-else class="moon-icon">{{ moonIcon }}</em></span
           >
@@ -45,14 +45,13 @@
 
           <el-popover
             placement="top"
-            width="180"
+            width="270"
             trigger="click"
             v-model:visible="customFontSavePopVisible"
           >
             <p>
-              请确认输入的字体名称完整无误，并且该字体已经安装在您的设备上。
+              已经安装在您的设备上的字体请确认输入的字体名称完整无误，或者从网络下载字体。
             </p>
-            <p>确定保存吗？</p>
             <div style="text-align: right; margin: 0">
               <el-button
                 size="small"
@@ -68,6 +67,15 @@
                   customFontSavePopVisible = false;
                 "
                 >确定</el-button
+              >
+              <el-button
+                type="primary"
+                size="small"
+                @click="
+                  loadFontFromURL();
+                  customFontSavePopVisible = false;
+                "
+                >网络下载</el-button
               >
             </div>
             <template #reference>
@@ -180,13 +188,35 @@ import "../assets/fonts/popfont.css";
 import "../assets/fonts/iconfont.css";
 import settings from "../config/themeConfig";
 import API from "@api";
+
 const store = useBookStore();
 
-const theme = ref(0);
+//阅读界面设置改变时保存同步配置
+let configChanged = false;
+watch(
+  () => store.config,
+  (newValue) => {
+    localStorage.setItem("config", JSON.stringify(newValue));
+    configChanged = true;
+  },
+  {
+    deep: 2, //深度为2
+  },
+);
+// 设置页面关闭时同步设置到阅读APP
+watch(
+  () => store.readSettingsVisible,
+  (visbile) => {
+    if (!visbile && configChanged)
+      API.saveReadConfig(store.config).then(() => (configChanged = false));
+  },
+);
 
-const isNight = ref(store.config.theme == 6);
-const moonIcon = ref("");
-const themeColors = shallowRef([
+//主题颜色
+const theme = computed(() => store.theme);
+const isNight = computed(() => store.isNight);
+const moonIcon = computed(() => (theme.value == 6 ? "" : ""));
+const themeColors = [
   {
     background: "rgba(250, 245, 235, 0.8)",
   },
@@ -208,143 +238,138 @@ const themeColors = shallowRef([
   {
     background: "rgba(0, 0, 0, 0.5)",
   },
-]);
-const moonIconStyle = ref({
-  display: "inline",
-  color: "rgba(255,255,255,0.2)",
-});
-const fonts = ref(["雅黑", "宋体", "楷书"]);
-const customFontName = ref(store.config.customFontName);
-const customFontSavePopVisible = ref(false);
-
-onMounted(() => {
-  //初始化设置项目
-  var config = store.config;
-  theme.value = config.theme;
-  if (theme.value == 6) {
-    moonIcon.value = "";
-  } else {
-    moonIcon.value = "";
-  }
-});
-const config = computed(() => {
-  return store.config;
-});
-
+];
 const popupTheme = computed(() => {
   return {
-    background: settings.themes[config.value.theme].popup,
+    background: settings.themes[theme.value].popup,
   };
 });
-const selectedTheme = computed(() => {
-  return store.config.theme;
-});
+const setTheme = (theme) => {
+  store.config.theme = theme;
+};
+
+//预置字体
+const fonts = ref(["雅黑", "宋体", "楷书"]);
+const setFont = (font) => {
+  store.config.font = font;
+};
 const selectedFont = computed(() => {
   return store.config.font;
 });
-
-const setTheme = (theme) => {
-  if (theme == 6) {
-    isNight.value = true;
-    moonIcon.value = "";
-    moonIconStyle.value.color = "#ed4259";
-  } else {
-    isNight.value = false;
-    moonIcon.value = "";
-    moonIconStyle.value.color = "rgba(255,255,255,0.2)";
-  }
-  config.value.theme = theme;
-  saveConfig(config.value);
-};
-const setFont = (font) => {
-  config.value.font = font;
-  saveConfig(config.value);
-};
+//自定义字体
+const customFontName = ref(store.config.customFontName);
+const customFontSavePopVisible = ref(false);
 const setCustomFont = () => {
-  config.value.font = -1;
-  config.value.customFontName = customFontName.value;
-  saveConfig(config.value);
+  store.config.font = -1;
+  store.config.customFontName = customFontName.value;
+};
+// 加载网络字体
+const loadFontFromURL = () => {
+  ElMessageBox.prompt("请输入 字体网络链接", "提示", {
+    confirmButtonText: "确定",
+    cancelButtonText: "取消",
+    inputPattern: /^https?:.+$/,
+    inputErrorMessage: "url 形式不正确",
+    beforeClose: (action, instance, done) => {
+      if (action === "confirm") {
+        instance.confirmButtonLoading = true;
+        instance.confirmButtonText = "下载中……";
+        // instance.inputValue
+        const url = instance.inputValue;
+        if (typeof FontFace !== "function") {
+          ElMessage.error("浏览器不支持FontFace");
+          return done();
+        }
+        const fontface = new FontFace(customFontName.value, `url("${url}")`);
+        //@ts-ignore
+        document.fonts.add(fontface);
+        fontface
+          .load()
+          //API.getBookShelf()
+          .then(function () {
+            instance.confirmButtonLoading = false;
+            ElMessage.info("字体加载成功！");
+            setCustomFont();
+            done();
+          })
+          .catch(function (error) {
+            instance.confirmButtonLoading = false;
+            instance.confirmButtonText = "确定";
+            ElMessage.error("下载失败，请检查您输入的 url");
+            throw error;
+          });
+      } else {
+        done();
+      }
+    },
+  });
 };
 
+//字体大小
 const fontSize = computed(() => {
   return store.config.fontSize;
 });
 const moreFontSize = () => {
-  if (config.value.fontSize < 48) config.value.fontSize += 2;
-  saveConfig(config.value);
+  if (store.config.fontSize < 48) store.config.fontSize += 2;
 };
 const lessFontSize = () => {
-  if (config.value.fontSize > 12) config.value.fontSize -= 2;
-  saveConfig(config.value);
+  if (store.config.fontSize > 12) store.config.fontSize -= 2;
 };
 
+//字 行 段落间距
 const spacing = computed(() => {
   return store.config.spacing;
 });
 const lessLetterSpacing = () => {
   store.config.spacing.letter -= 0.01;
-  saveConfig(config.value);
 };
 const moreLetterSpacing = () => {
   store.config.spacing.letter += 0.01;
-  saveConfig(config.value);
 };
 const lessLineSpacing = () => {
   store.config.spacing.line -= 0.1;
-  saveConfig(config.value);
 };
 const moreLineSpacing = () => {
   store.config.spacing.line += 0.1;
-  saveConfig(config.value);
 };
 const lessParagraphSpacing = () => {
   store.config.spacing.paragraph -= 0.1;
-  saveConfig(config.value);
 };
 const moreParagraphSpacing = () => {
   store.config.spacing.paragraph += 0.1;
-  saveConfig(config.value);
 };
 
+//页面宽度
 const readWidth = computed(() => {
   return store.config.readWidth;
 });
 const moreReadWidth = () => {
   // 此时会截断页面
-  if (config.value.readWidth + 160 + 2 * 68 > window.innerWidth) return;
-  config.value.readWidth += 160;
-  saveConfig(config.value);
+  if (store.config.readWidth + 160 + 2 * 68 > window.innerWidth) return;
+  store.config.readWidth += 160;
 };
 const lessReadWidth = () => {
-  if (config.value.readWidth > 640) config.value.readWidth -= 160;
-  saveConfig(config.value);
+  if (store.config.readWidth > 640) store.config.readWidth -= 160;
 };
+
+//翻页速度
 const jumpDuration = computed(() => {
   return store.config.jumpDuration;
 });
 const moreJumpDuration = () => {
   store.config.jumpDuration += 100;
-  saveConfig(config.value);
 };
 const lessJumpDuration = () => {
   if (store.config.jumpDuration === 0) return;
   store.config.jumpDuration -= 100;
-  saveConfig(config.value);
 };
+
+//无限加载
 const infiniteLoading = computed(() => {
   return store.config.infiniteLoading;
 });
 const setInfiniteLoading = (loading) => {
-  config.value.infiniteLoading = loading;
-  saveConfig(config.value);
-};
-const saveConfig = (config) => {
-  store.setConfig(config);
-  localStorage.setItem("config", JSON.stringify(config));
-  uploadConfig(config);
-};
-const uploadConfig = (config) => {
-  API.saveReadConfig(config);
+  store.config.infiniteLoading = loading;
 };
 </script>
 

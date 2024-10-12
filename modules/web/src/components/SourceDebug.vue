@@ -13,7 +13,7 @@
     v-model="printDebug"
     type="textarea"
     readonly
-    rows="29"
+    :rows="29"
     placeholder="这里用于输出调试信息"
   />
 </template>
@@ -44,8 +44,8 @@ const startDebug = async () => {
   try {
     await API.saveSource(store.currentSource);
   } catch (e) {
-    store.debugFinish()
-    throw e
+    store.debugFinish();
+    throw e;
   }
   API.debug(
     store.currentSourceUrl,
@@ -56,7 +56,7 @@ const startDebug = async () => {
 };
 
 const isBookSource = computed(() => {
-  return /bookSource/.test(window.location.href);
+  return /bookSource/i.test(window.location.href);
 });
 </script>
 

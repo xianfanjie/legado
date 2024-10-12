@@ -54,7 +54,7 @@ import SourceItem from "./SourceItem.vue";
 const store = useSourceStore();
 const sourceUrlSelect = ref([]);
 const searchKey = ref("");
-const { sources, sourcesMap } = storeToRefs(store);
+const sources = computed(() => store.sources);
 
 // 筛选源
 /** @type Ref<import('@/source').Source[]> */
@@ -74,7 +74,7 @@ const sourceSelect = computed(() => {
   if (urls.length == 0) return [];
   const sourcesFilteredMap =
     searchKey.value == ""
-      ? sourcesMap.value
+      ? store.sourcesMap
       : convertSourcesToMap(sourcesFiltered.value);
   return urls.reduce((sources, sourceUrl) => {
     const source = sourcesFilteredMap.get(sourceUrl);
@@ -109,7 +109,7 @@ const importSourceFile = () => {
   input.addEventListener("change", (e) => {
     // @ts-ignore
     const file = e.target.files[0];
-    var reader = new FileReader();
+    const reader = new FileReader();
     reader.readAsText(file);
     reader.onload = () => {
       try {
@@ -127,7 +127,7 @@ const importSourceFile = () => {
   input.click();
 };
 
-const isBookSource = /bookSource/.test(window.location.href);
+const isBookSource = /bookSource/i.test(window.location.href);
 const outExport = () => {
   const exportFile = document.createElement("a");
   let sources =
@@ -145,6 +145,7 @@ const outExport = () => {
   });
   exportFile.href = window.URL.createObjectURL(myBlob);
   exportFile.click();
+  window.URL.revokeObjectURL(exportFile.href); //avoid memory leak
 };
 </script>
 
